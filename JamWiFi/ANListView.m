@@ -8,6 +8,7 @@
 
 #import "ANListView.h"
 #import "ANAppDelegate.h"
+#import "Globals.h"
 
 @interface ANListView (Private)
 
@@ -134,6 +135,7 @@
         self->interfaceName = interface.interfaceName;
         NSError * error = nil;
         NSArray * nets = [[interface scanForNetworksWithSSID:nil error:&error] allObjects];
+        Globals.instance.nets = nets;
         if (error) NSLog(@"wifi scan error: %@", error);
         if (!nets) {
             [weakSelf performSelectorOnMainThread:@selector(handleScanError) withObject:nil waitUntilDone:NO];

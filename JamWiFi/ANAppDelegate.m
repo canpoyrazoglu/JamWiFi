@@ -8,13 +8,39 @@
 
 #import "ANAppDelegate.h"
 #import "ANListView.h"
+#import "Output.h"
 
-@implementation ANAppDelegate
+@implementation ANAppDelegate{
+    NSWindow *outputWindow;
+}
+
+-(NSView *)loadWithNibNamed:(NSString *)nibNamed owner:(id)owner class:(Class)loadClass {
+    
+    NSNib * nib = [[NSNib alloc] initWithNibNamed:nibNamed bundle:nil];
+    
+    NSArray * objects;
+    if (![nib instantiateWithOwner:owner topLevelObjects:&objects]) {
+        NSLog(@"Couldn't load nib named %@", nibNamed);
+        return nil;
+    }
+    
+    for (id object in objects) {
+        if ([object isKindOfClass:loadClass]) {
+            return object;
+        }
+    }
+    return nil;
+}
 
 @synthesize window = _window;
 
 - (void)applicationDidFinishLaunching:(NSNotification *)aNotification {
     // Insert code here to initialize your application
+    
+    outputWindow = [[NSWindow alloc] initWithContentRect:NSMakeRect(860, 500, 450, 300) styleMask: NSWindowStyleMaskTitled backing:NSBackingStoreBuffered defer:NO];
+    outputWindow.isVisible = YES;
+    outputWindow.title = @"Output";
+    outputWindow.contentView = [self loadWithNibNamed:@"Output" owner:Output.instance class:[NSView class]];
     networkList = [[ANListView alloc] initWithFrame:[self.window.contentView bounds]];
     [self pushView:networkList direction:ANViewSlideDirectionForward];
     [[CarbonAppProcess currentProcess] makeFrontmost];

